@@ -1,345 +1,1189 @@
 <!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<html lang="pl"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Świąteczny Los</title>
+    <title>Świąteczny Los 🎄</title>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-<!-- QR Code -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-<style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        min-height: 100%;
-    }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
 
-    body {
-        font-family: Arial, sans-serif;
-        background: url('https://i.ibb.co/tBf5G6/christmas-bg.jpg')
-            no-repeat center center fixed;
-        background-size: cover;
-        color: #fff;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 20px;
-        box-sizing: border-box;
-    }
+            background: url('https://i.ibb.co/tBf5G6/christmas-bg.jpg')
+                no-repeat center center fixed;
+            background-size: cover;
 
-    .container {
-        background-color: rgba(0, 0, 0, 0.72);
-        padding: 35px;
-        border-radius: 20px;
-        width: 100%;
-        max-width: 700px;
-        text-align: center;
-        box-sizing: border-box;
-    }
+            display: flex;
+            justify-content: center;
+            align-items: center;
 
-    h1 {
-        color: #ffdd00;
-        text-shadow: 2px 2px #b30000;
-        cursor: pointer;
-        margin-top: 0;
-    }
-
-    #availableUsers {
-        margin-bottom: 20px;
-        font-weight: bold;
-        font-size: 16px;
-        background-color: rgba(255, 255, 255, 0.9);
-        color: #000;
-        padding: 12px;
-        border-radius: 8px;
-    }
-
-    label {
-        font-size: 17px;
-        font-weight: bold;
-    }
-
-    #name {
-        padding: 12px;
-        font-size: 17px;
-        margin: 12px;
-        border-radius: 8px;
-        border: 2px solid #ffdd00;
-        width: 80%;
-        max-width: 350px;
-        box-sizing: border-box;
-    }
-
-    #groupButtons {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
-
-    .groupButton {
-        padding: 18px 10px;
-        font-size: 20px;
-        font-weight: bold;
-        background-color: #b30000;
-        color: white;
-        border: 3px solid #ffdd00;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: 0.2s;
-        margin: 0;
-    }
-
-    .groupButton:hover:not(:disabled) {
-        background-color: #ff3333;
-        transform: scale(1.03);
-    }
-
-    .groupButton.selected {
-        background-color: #ffdd00;
-        color: #8b0000;
-        border-color: white;
-        transform: scale(1.03);
-    }
-
-    .groupButton:disabled {
-        background-color: #666;
-        border-color: #888;
-        color: #bbb;
-        cursor: not-allowed;
-        opacity: 0.65;
-        transform: none;
-    }
-
-    #drawButton {
-        padding: 14px 30px;
-        font-size: 19px;
-        background-color: #b30000;
-        color: white;
-        border: none;
-        border-radius: 10px;
-        cursor: pointer;
-        margin-top: 10px;
-    }
-
-    #drawButton:hover:not(:disabled) {
-        background-color: #ff3333;
-    }
-
-    #drawButton:disabled {
-        background-color: #777;
-        cursor: not-allowed;
-    }
-
-    #result {
-        margin-top: 20px;
-        font-weight: bold;
-        font-size: 18px;
-        background-color: rgba(255, 255, 255, 0.9);
-        color: #000;
-        padding: 15px;
-        border-radius: 10px;
-        min-height: 20px;
-    }
-
-    #qrcode {
-        margin-top: 25px;
-        display: flex;
-        justify-content: center;
-    }
-
-    #adminPanel {
-        margin-top: 30px;
-        display: none;
-        background-color: rgba(255, 255, 255, 0.95);
-        color: #000;
-        padding: 15px;
-        border-radius: 10px;
-    }
-
-    #logs {
-        width: 95%;
-        max-width: 600px;
-        box-sizing: border-box;
-    }
-
-    .adminButton {
-        padding: 10px 15px;
-        font-size: 15px;
-        background-color: #555;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        margin: 5px;
-    }
-
-    .adminButton:hover {
-        background-color: #333;
-    }
-
-    .resetButton {
-        background-color: #8b0000;
-    }
-
-    .resetButton:hover {
-        background-color: #b30000;
-    }
-
-    .adminInfo {
-        font-size: 13px;
-        margin-top: 10px;
-    }
-
-    @media (max-width: 500px) {
-        .container {
             padding: 20px;
         }
 
-        #groupButtons {
-            grid-template-columns: 1fr;
-        }
+        .container {
+            width: 100%;
+            max-width: 600px;
 
-        .groupButton {
-            padding: 16px;
-            font-size: 19px;
+            background: rgba(255, 255, 255, 0.94);
+
+            padding: 30px;
+            border-radius: 20px;
+
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+
+            text-align: center;
         }
 
         h1 {
-            font-size: 25px;
+            margin-top: 0;
+            color: #b30000;
+            cursor: pointer;
         }
-    }
-</style>
 
+        h2 {
+            color: #333;
+        }
+
+        p {
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+
+            margin-top: 10px;
+            margin-bottom: 20px;
+
+            border: 2px solid #ddd;
+            border-radius: 10px;
+
+            font-size: 16px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #b30000;
+        }
+
+        .groups {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+
+            margin-top: 20px;
+        }
+
+        .group-button {
+            padding: 18px 5px;
+
+            border: none;
+            border-radius: 12px;
+
+            background: #b30000;
+            color: white;
+
+            font-size: 20px;
+            font-weight: bold;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+        .group-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            background: #8f0000;
+        }
+
+        .group-button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        #result {
+            margin-top: 25px;
+            padding: 20px;
+
+            border-radius: 15px;
+
+            background: #f5f5f5;
+
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        #available {
+            margin-top: 20px;
+
+            padding: 12px;
+
+            border-radius: 10px;
+
+            background: rgba(255, 255, 255, 0.8);
+
+            color: #333;
+            font-size: 14px;
+        }
+
+        #adminPanel {
+            display: none;
+
+            margin-top: 30px;
+            padding: 20px;
+
+            background: #f0f0f0;
+
+            border-radius: 15px;
+        }
+
+        #adminLogs {
+            margin-top: 20px;
+
+            text-align: left;
+
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log {
+            padding: 10px;
+            margin-bottom: 8px;
+
+            background: white;
+
+            border-radius: 8px;
+
+            font-size: 14px;
+        }
+
+        .admin-button {
+            padding: 12px 20px;
+
+            margin: 5px;
+
+            border: none;
+            border-radius: 8px;
+
+            background: #333;
+            color: white;
+
+            cursor: pointer;
+        }
+
+        .admin-button:hover {
+            background: #111;
+        }
+
+        #qrCode {
+            margin-top: 25px;
+
+            display: flex;
+            justify-content: center;
+        }
+
+        .warning {
+            color: #b30000;
+            font-weight: bold;
+        }
+
+        @media (max-width: 500px) {
+
+            .container {
+                padding: 20px;
+            }
+
+            .groups {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 5px;
+            }
+
+            .group-button {
+                padding: 15px 3px;
+                font-size: 17px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
 <div class="container">
 
-<h1>🎄 Świąteczny Los 🎄</h1>
+    <h1 id="title">🎄 Świąteczny Los 🎁</h1>
 
-<div id="availableUsers">
-    Ładowanie...
-</div>
+    <p>
+        Wpisz swoje imię, a następnie wybierz jedną z dostępnych grup.
+    </p>
 
-<label for="name">
-    Wpisz swój login:
-</label>
-
-<br>
-
-<input
-    type="text"
-    id="name"
-    placeholder="Twoje imię"
-    autocomplete="off"
->
-
-<div style="margin-top: 15px;">
-    <strong>Wybierz grupę:</strong>
-</div>
-
-<div id="groupButtons">
-
-    <button
-        class="groupButton"
-        data-group="1"
-        onclick="selectGroup(1)"
+    <input
+        type="text"
+        id="nameInput"
+        placeholder="Wpisz swoje imię..."
+        autocomplete="off"
     >
-        GRUPA A
-    </button>
 
-    <button
-        class="groupButton"
-        data-group="2"
-        onclick="selectGroup(2)"
-    >
-        GRUPA B
-    </button>
+    <div id="available">
+        Sprawdzanie dostępności...
+    </div>
 
-    <button
-        class="groupButton"
-        data-group="3"
-        onclick="selectGroup(3)"
-    >
-        GRUPA C
-    </button>
+    <h2>Wybierz grupę</h2>
 
-    <button
-        class="groupButton"
-        data-group="4"
-        onclick="selectGroup(4)"
-    >
-        GRUPA D
-    </button>
+    <p>
+        Wybierz A, B, C, D lub E.
+    </p>
 
-    <button
-        class="groupButton"
-        data-group="5"
-        onclick="selectGroup(5)"
-    >
-        GRUPA E
-    </button>
+    <div class="groups">
 
-</div>
+        <button class="group-button" data-group="1">
+            A
+        </button>
 
-<button
-    id="drawButton"
-    onclick="drawGroup()"
-    disabled
->
-    🎁 Losuj grupę
-</button>
+        <button class="group-button" data-group="2">
+            B
+        </button>
 
-<div id="result"></div>
+        <button class="group-button" data-group="3">
+            C
+        </button>
 
-<div id="qrcode"></div>
+        <button class="group-button" data-group="4">
+            D
+        </button>
 
+        <button class="group-button" data-group="5">
+            E
+        </button>
 
-<!-- PANEL ADMINISTRATORA -->
+    </div>
 
-<div id="adminPanel">
+    <div id="result"></div>
 
-    <h2>👑 Panel Administratora</h2>
+    <div id="qrCode"></div>
 
-    <h3>Logi losowania 2026</h3>
+    <!-- PANEL ADMINISTRATORA -->
 
-    <textarea
-        id="logs"
-        rows="12"
-        readonly
-    ></textarea>
+    <div id="adminPanel">
 
-    <br>
+        <h2>🔐 Panel administratora</h2>
 
-    <button
-        class="adminButton"
-        onclick="loadLogs()"
-    >
-        🔄 Odśwież logi
-    </button>
+        <button
+            class="admin-button"
+            id="loadLogs"
+        >
+            Pokaż wyniki
+        </button>
 
-    <button
-        class="adminButton resetButton"
-        onclick="resetCurrentYear()"
-    >
-        🗑️ Resetuj losowanie 2026
-    </button>
+        <button
+            class="admin-button"
+            id="resetData"
+        >
+            Resetuj losowanie 2026
+        </button>
 
-    <div class="adminInfo">
-        Reset usuwa tylko wyniki z 2026.
-        <br>
-        Dane z poprzednich lat pozostają w bazie.
+        <div id="adminLogs"></div>
+
     </div>
 
 </div>
 
-</div>
 
-<script> /* ========================================= USTAWIENIA ========================================= */ const CURRENT_YEAR = 2026; const ADMIN_PASSWORD = 'Visiativ17'; /* ========================================= FIREBASE ========================================= */ const firebaseConfig = { apiKey: "AIzaSyCsLwn69mSEbZNJOnaEKxZMEBGc_9nF3j4", authDomain: "swiateczny-los.firebaseapp.com", projectId: "swiateczny-los", storageBucket: "swiateczny-los.firebasestorage.app", messagingSenderId: "106728824953", appId: "1:106728824953:web:0b317e165afecc3fb734a8" }; firebase.initializeApp(firebaseConfig); const db = firebase.firestore(); /* ========================================= GRUPY ========================================= */ const groups = { 1: [ 'Anna', 'Jan' ], 2: [ 'Madzia', 'Kazek', 'Ania', 'Mikołaj' ], 3: [ 'Kasia', 'Kamil', 'Franuś' ], 4: [ 'Sabina', 'Artur', 'Wiktoria' ], 5: [ 'Madzia', 'Jarek', 'Krzyś' ] }; /* ========================================= UŻYTKOWNICY ========================================= */ const users = [ 'Kasia', 'Jarek', 'Sabina', 'Anna', 'Magda' ]; /* ========================================= GRUPY UŻYTKOWNIKÓW ========================================= */ const userGroups = { Kasia: 3, Jarek: 5, Sabina: 4, Anna: 1, Magda: 2 }; /* ========================================= ZMIENNE ========================================= */ let selectedGroup = null; const resultDiv = document.getElementById('result'); const availableDiv = document.getElementById('availableUsers'); const drawButton = document.getElementById('drawButton'); const nameInput = document.getElementById('name'); /* ========================================= ID DOKUMENTÓW ========================================= */ function drawDocumentId(user) { return CURRENT_YEAR + '_' + user; } function groupDocumentId(groupNum) { return CURRENT_YEAR + '_' + groupNum; } /* ========================================= LITERY GRUP ========================================= */ function groupLetter(groupNum) { return String.fromCharCode(64 + groupNum); } /* ========================================= POBIERANIE ZAJĘTYCH GRUP ========================================= */ async function getTakenGroups() { const snapshot = await db .collection('groupLocks') .where('year', '==', CURRENT_YEAR) .get(); return snapshot.docs.map( doc => doc.data().groupNum ); } /* ========================================= SPRAWDZENIE CZY UŻYTKOWNIK JUŻ LOSOWAŁ ========================================= */ async function getUserDraw(user) { const doc = await db .collection('draws') .doc(drawDocumentId(user)) .get(); if (!doc.exists) { return null; } return doc.data(); } /* ========================================= AKTUALIZACJA LISTY DOSTĘPNYCH UŻYTKOWNIKÓW WAŻNE: Lista jest liczona na podstawie kolekcji "draws", czyli osób, które FAKTYCZNIE już oddały głos. ========================================= */ async function updateAvailableUsers() { try { const snapshot = await db .collection('draws') .where('year', '==', CURRENT_YEAR) .get(); const drawnUsers = snapshot.docs.map( doc => doc.data().user ); const availableUsers = users.filter( user => !drawnUsers.includes(user) ); if (availableUsers.length > 0) { availableDiv.textContent = 'Dostępni do losowania: ' + availableUsers.join(', '); } else { availableDiv.textContent = '🎉 Wszyscy już dokonali losowania!'; } } catch (error) { console.error(error); availableDiv.textContent = '⚠️ Problem z połączeniem z bazą danych.'; } } /* ========================================= AKTUALIZACJA PRZYCISKÓW GRUP ========================================= */ async function updateGroupButtons() { try { const takenGroups = await getTakenGroups(); const name = nameInput.value.trim(); const ownGroup = userGroups[name]; document .querySelectorAll('.groupButton') .forEach(button => { const groupNum = Number(button.dataset.group); if ( takenGroups.includes(groupNum) ) { button.disabled = true; button.textContent = 'GRUPA ' + groupLetter(groupNum) + ' ✓'; return; } if ( name && groupNum === ownGroup ) { button.disabled = true; button.textContent = 'GRUPA ' + groupLetter(groupNum) + ' — TWOJA'; return; } button.disabled = false; button.textContent = 'GRUPA ' + groupLetter(groupNum); }); } catch (error) { console.error(error); } } /* ========================================= AKTUALIZACJA WSZYSTKICH DANYCH ========================================= */ async function updateEverything() { await updateGroupButtons(); await updateAvailableUsers(); } /* ========================================= WYBÓR GRUPY ========================================= */ async function selectGroup(groupNum) { const name = nameInput.value.trim(); if (!users.includes(name)) { resultDiv.textContent = 'Najpierw wpisz poprawny login: ' + users.join(', '); return; } if (groupNum === userGroups[name]) { resultDiv.textContent = '🚫 Nie możesz wybrać swojej własnej grupy!'; return; } try { const takenGroups = await getTakenGroups(); if (takenGroups.includes(groupNum)) { resultDiv.textContent = '⚠️ Ta grupa została już wybrana.'; await updateEverything(); return; } const existing = await getUserDraw(name); if (existing) { resultDiv.textContent = '⚠️ ' + name + ', już dokonałeś wyboru. ' + 'Wybrałeś Grupę ' + existing.groupNum + ': ' + existing.members; drawButton.disabled = true; return; } selectedGroup = groupNum; document .querySelectorAll('.groupButton') .forEach(button => { button.classList.remove('selected'); }); document .querySelector( `.groupButton[data-group="${groupNum}"]` ) .classList.add('selected'); resultDiv.textContent = 'Wybrana: GRUPA ' + groupLetter(groupNum); drawButton.disabled = false; } catch (error) { console.error(error); resultDiv.textContent = '❌ Nie udało się sprawdzić danych.'; } } /* ========================================= ZMIANA LOGINU ========================================= */ nameInput.addEventListener( 'input', async function() { selectedGroup = null; drawButton.disabled = true; document .querySelectorAll('.groupButton') .forEach(button => { button.classList.remove('selected'); }); resultDiv.textContent = ''; await updateEverything(); } ); /* ========================================= LOSOWANIE ========================================= */ async function drawGroup() { const name = nameInput.value.trim(); if (!users.includes(name)) { resultDiv.textContent = 'Niepoprawny login. Wpisz jedno z: ' + users.join(', '); return; } if (!selectedGroup) { resultDiv.textContent = 'Najpierw wybierz grupę.'; return; } if ( selectedGroup === userGroups[name] ) { resultDiv.textContent = '🚫 Nie możesz wybrać swojej własnej grupy!'; return; } drawButton.disabled = true; resultDiv.textContent = '⏳ Zapisuję Twój wybór...'; try { const chosenGroup = selectedGroup; /* * TRANSAKCJA FIREBASE * * Dzięki temu dwie osoby * nie mogą jednocześnie * zająć tej samej grupy. */ const result = await db.runTransaction( async transaction => { const userRef = db .collection('draws') .doc( drawDocumentId(name) ); const groupRef = db .collection('groupLocks') .doc( groupDocumentId( chosenGroup ) ); const userDoc = await transaction.get( userRef ); const groupDoc = await transaction.get( groupRef ); if (userDoc.exists) { throw new Error( 'USER_ALREADY_DREW' ); } if (groupDoc.exists) { throw new Error( 'GROUP_ALREADY_TAKEN' ); } const members = groups[chosenGroup].join(', '); const now = new Date().toISOString(); transaction.set( userRef, { year: CURRENT_YEAR, timestamp: now, user: name, groupNum: chosenGroup, members: members } ); transaction.set( groupRef, { year: CURRENT_YEAR, groupNum: chosenGroup, user: name, timestamp: now } ); return { members: members, groupNum: chosenGroup }; } ); resultDiv.textContent = '🎉 Gratulacje ' + name + '! Wybrałeś GRUPĘ ' + groupLetter(result.groupNum) + '. Członkowie grupy: ' + result.members; selectedGroup = null; document .querySelectorAll('.groupButton') .forEach(button => { button.classList.remove( 'selected' ); }); /* * Natychmiastowa aktualizacja * po zakończeniu losowania. */ await updateEverything(); } catch (error) { console.error(error); if ( error.message === 'USER_ALREADY_DREW' ) { const existing = await getUserDraw(name); if (existing) { resultDiv.textContent = '⚠️ ' + name + ', już dokonałeś wyboru. ' + 'Wybrałeś Grupę ' + existing.groupNum + ': ' + existing.members; } } else if ( error.message === 'GROUP_ALREADY_TAKEN' ) { resultDiv.textContent = '⚠️ Ta grupa została właśnie ' + 'wybrana przez inną osobę. ' + 'Wybierz inną grupę.'; await updateEverything(); } else { resultDiv.textContent = '❌ Nie udało się zapisać wyboru. ' + 'Sprawdź połączenie z Firebase.'; } } finally { drawButton.disabled = !selectedGroup; } } /* ========================================= AUTOMATYCZNY NASŁUCH FIREBASE To jest najważniejsza poprawka. Kiedy Sabina odda głos, wszystkie otwarte strony automatycznie dostaną zmianę. ========================================= */ function setupRealtimeUpdates() { /* * Nasłuchujemy zmian w "draws". * Dzięki temu lista użytkowników * aktualizuje się automatycznie. */ db .collection('draws') .where('year', '==', CURRENT_YEAR) .onSnapshot( snapshot => { const drawnUsers = snapshot.docs.map( doc => doc.data().user ); const availableUsers = users.filter( user => !drawnUsers.includes(user) ); if ( availableUsers.length > 0 ) { availableDiv.textContent = 'Dostępni do losowania: ' + availableUsers.join(', '); } else { availableDiv.textContent = '🎉 Wszyscy już dokonali losowania!'; } }, error => { console.error( 'Błąd nasłuchiwania draws:', error ); availableDiv.textContent = '⚠️ Problem z aktualizacją listy.'; } ); /* * Osobny nasłuch dla zajętych grup. */ db .collection('groupLocks') .where('year', '==', CURRENT_YEAR) .onSnapshot( () => { updateGroupButtons(); }, error => { console.error( 'Błąd nasłuchiwania grup:', error ); } ); } /* ========================================= PANEL ADMINISTRATORA ========================================= */ function showAdminPanel() { const password = prompt( 'Podaj hasło administratora:' ); if ( password !== ADMIN_PASSWORD ) { alert( 'Niepoprawne hasło' ); return; } document .getElementById('adminPanel') .style.display = 'block'; loadLogs(); } /* ========================================= LOGI ========================================= */ async function loadLogs() { const logsArea = document.getElementById('logs'); logsArea.value = '⏳ Ładowanie...'; try { const snapshot = await db .collection('draws') .where( 'year', '==', CURRENT_YEAR ) .get(); if (snapshot.empty) { logsArea.value = 'Brak losowań w 2026.'; return; } const logs = snapshot.docs .map(doc => doc.data()) .sort( (a, b) => a.timestamp.localeCompare( b.timestamp ) ); logsArea.value = logs .map(log => { return ( log.timestamp + ' - ' + log.user + ' wybrał GRUPĘ ' + groupLetter( log.groupNum ) + ' (' + log.members + ')' ); }) .join('\n'); } catch (error) { console.error(error); logsArea.value = '❌ Nie udało się pobrać logów.\n\n' + error.message; } } /* ========================================= RESET 2026 ========================================= */ async function resetCurrentYear() { const confirmation = prompt( 'Aby potwierdzić reset 2026, wpisz: RESET' ); if ( confirmation !== 'RESET' ) { alert( 'Reset anulowany.' ); return; } try { /* * USUWANIE LOSOWAŃ */ let snapshot = await db .collection('draws') .where( 'year', '==', CURRENT_YEAR ) .get(); let batch = db.batch(); snapshot.docs.forEach( doc => { batch.delete( doc.ref ); } ); await batch.commit(); /* * USUWANIE BLOKAD GRUP */ snapshot = await db .collection('groupLocks') .where( 'year', '==', CURRENT_YEAR ) .get(); batch = db.batch(); snapshot.docs.forEach( doc => { batch.delete( doc.ref ); } ); await batch.commit(); selectedGroup = null; resultDiv.textContent = '♻️ Losowanie 2026 zostało zresetowane.'; document .querySelectorAll('.groupButton') .forEach(button => { button.classList.remove( 'selected' ); }); await updateEverything(); document .getElementById('logs') .value = 'Losowanie 2026 zostało zresetowane.'; alert( 'Losowanie 2026 zostało zresetowane.' ); } catch (error) { console.error(error); alert( '❌ Nie udało się wykonać resetu.\n\n' + error.message ); } } /* ========================================= PODWÓJNE KLIKNIĘCIE W NAPIS OTWIERA PANEL ADMINA ========================================= */ document .querySelector('h1') .addEventListener( 'dblclick', showAdminPanel ); /* ========================================= START APLIKACJI ========================================= */ updateEverything(); setupRealtimeUpdates(); /* ========================================= KOD QR ========================================= */ new QRCode( document.getElementById('qrcode'), { text: window.location.href, width: 128, height: 128 } ); </script>
+<script>
 
-</body> </html>
+    // =========================================================
+    // FIREBASE
+    // =========================================================
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCsLwn69mSEbZNJOnaEKxZMEBGc_9nF3j4",
+        authDomain: "swiateczny-los.firebaseapp.com",
+        projectId: "swiateczny-los",
+        storageBucket: "swiateczny-los.firebasestorage.app",
+        messagingSenderId: "106728824953",
+        appId: "1:106728824953:web:0b317e165afecc3fb734a8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const db = firebase.firestore();
+
+
+    // =========================================================
+    // USTAWIENIA
+    // =========================================================
+
+    const CURRENT_YEAR = 2026;
+
+    const ADMIN_PASSWORD = "Visiativ17";
+
+
+    // Użytkownicy, którzy mogą losować
+
+    const users = [
+        "Kasia",
+        "Jarek",
+        "Sabina",
+        "Anna",
+        "Magda"
+    ];
+
+
+    // Grupa przypisana do każdego użytkownika
+
+    const userGroups = {
+        "Kasia": 3,
+        "Jarek": 5,
+        "Sabina": 4,
+        "Anna": 1,
+        "Magda": 2
+    };
+
+
+    // =========================================================
+    // ELEMENTY STRONY
+    // =========================================================
+
+    const nameInput =
+        document.getElementById("nameInput");
+
+    const availableDiv =
+        document.getElementById("available");
+
+    const resultDiv =
+        document.getElementById("result");
+
+    const qrCodeDiv =
+        document.getElementById("qrCode");
+
+    const adminPanel =
+        document.getElementById("adminPanel");
+
+    const adminLogs =
+        document.getElementById("adminLogs");
+
+    const groupButtons =
+        document.querySelectorAll(".group-button");
+
+
+    // =========================================================
+    // SPRAWDZENIE, KTO JUŻ LOSOWAŁ
+    // =========================================================
+
+    async function updateAvailableUsers() {
+
+        try {
+
+            const snapshot =
+                await db
+                    .collection("draws")
+                    .where(
+                        "year",
+                        "==",
+                        CURRENT_YEAR
+                    )
+                    .get();
+
+
+            const drawnUsers =
+                snapshot.docs.map(
+                    doc => doc.data().user
+                );
+
+
+            const availableUsers =
+                users.filter(
+                    user =>
+                        !drawnUsers.includes(user)
+                );
+
+
+            if (availableUsers.length > 0) {
+
+                availableDiv.textContent =
+                    "Dostępni do losowania: " +
+                    availableUsers.join(", ");
+
+            } else {
+
+                availableDiv.textContent =
+                    "🎉 Wszyscy już dokonali losowania!";
+
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            availableDiv.textContent =
+                "⚠️ Problem z połączeniem z bazą danych.";
+
+        }
+
+    }
+
+
+    // =========================================================
+    // AKTUALIZACJA PRZYCISKÓW GRUP
+    // =========================================================
+
+    async function updateGroupButtons() {
+
+        try {
+
+            const snapshot =
+                await db
+                    .collection("groupLocks")
+                    .where(
+                        "year",
+                        "==",
+                        CURRENT_YEAR
+                    )
+                    .get();
+
+
+            const takenGroups =
+                snapshot.docs.map(
+                    doc => doc.data().group
+                );
+
+
+            const selectedName =
+                nameInput.value.trim();
+
+
+            const ownGroup =
+                userGroups[selectedName];
+
+
+            groupButtons.forEach(button => {
+
+                const group =
+                    Number(
+                        button.dataset.group
+                    );
+
+
+                // =================================================
+                // WAŻNE:
+                //
+                // NIE pokazujemy użytkownikowi,
+                // kto znajduje się w grupie.
+                //
+                // Przycisk jest po prostu niedostępny.
+                // =================================================
+
+                if (takenGroups.includes(group)) {
+
+                    button.disabled = true;
+
+                } else if (
+                    selectedName &&
+                    ownGroup === group
+                ) {
+
+                    // Własnej grupy również nie można wybrać,
+                    // ale użytkownik nie dostaje informacji,
+                    // DLACZEGO.
+
+                    button.disabled = true;
+
+                } else {
+
+                    button.disabled = false;
+
+                }
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                "Błąd aktualizacji grup:",
+                error
+            );
+
+        }
+
+    }
+
+
+    // =========================================================
+    // AKTUALIZACJA WSZYSTKIEGO
+    // =========================================================
+
+    async function updateEverything() {
+
+        await updateGroupButtons();
+
+        await updateAvailableUsers();
+
+    }
+
+
+    // =========================================================
+    // ZMIANA IMIENIA
+    // =========================================================
+
+    nameInput.addEventListener(
+        "input",
+        async function() {
+
+            resultDiv.textContent = "";
+
+            qrCodeDiv.innerHTML = "";
+
+            await updateGroupButtons();
+
+        }
+    );
+
+
+    // =========================================================
+    // LOSOWANIE
+    // =========================================================
+
+    groupButtons.forEach(button => {
+
+        button.addEventListener(
+            "click",
+            async function() {
+
+                const selectedName =
+                    nameInput.value.trim();
+
+                const selectedGroup =
+                    Number(
+                        this.dataset.group
+                    );
+
+
+                // -------------------------------------------------
+                // Sprawdzenie imienia
+                // -------------------------------------------------
+
+                if (!selectedName) {
+
+                    resultDiv.innerHTML =
+                        '<span class="warning">' +
+                        'Najpierw wpisz swoje imię.' +
+                        '</span>';
+
+                    return;
+
+                }
+
+
+                // -------------------------------------------------
+                // Sprawdzenie czy użytkownik jest na liście
+                // -------------------------------------------------
+
+                if (!users.includes(selectedName)) {
+
+                    resultDiv.innerHTML =
+                        '<span class="warning">' +
+                        'Nie znaleziono tego imienia.' +
+                        '</span>';
+
+                    return;
+
+                }
+
+
+                resultDiv.textContent =
+                    "⏳ Losowanie...";
+
+
+                try {
+
+                    // =================================================
+                    // TRANSAKCJA FIRESTORE
+                    // =================================================
+
+                    await db.runTransaction(
+                        async transaction => {
+
+                            const drawRef =
+                                db
+                                    .collection("draws")
+                                    .doc(
+                                        CURRENT_YEAR +
+                                        "_" +
+                                        selectedName
+                                    );
+
+
+                            const groupLockRef =
+                                db
+                                    .collection("groupLocks")
+                                    .doc(
+                                        CURRENT_YEAR +
+                                        "_" +
+                                        selectedGroup
+                                    );
+
+
+                            const drawDoc =
+                                await transaction.get(
+                                    drawRef
+                                );
+
+
+                            const groupDoc =
+                                await transaction.get(
+                                    groupLockRef
+                                );
+
+
+                            // -----------------------------------------
+                            // Użytkownik już losował
+                            // -----------------------------------------
+
+                            if (drawDoc.exists) {
+
+                                throw new Error(
+                                    "ALREADY_DRAWN"
+                                );
+
+                            }
+
+
+                            // -----------------------------------------
+                            // Grupa jest już zajęta
+                            // -----------------------------------------
+
+                            if (groupDoc.exists) {
+
+                                throw new Error(
+                                    "GROUP_TAKEN"
+                                );
+
+                            }
+
+
+                            // -----------------------------------------
+                            // Własna grupa
+                            // -----------------------------------------
+
+                            if (
+                                userGroups[selectedName] ===
+                                selectedGroup
+                            ) {
+
+                                throw new Error(
+                                    "OWN_GROUP"
+                                );
+
+                            }
+
+
+                            // -----------------------------------------
+                            // Zapis losowania
+                            // -----------------------------------------
+
+                            transaction.set(
+                                drawRef,
+                                {
+                                    year: CURRENT_YEAR,
+                                    user: selectedName,
+                                    group: selectedGroup,
+                                    timestamp:
+                                        firebase.firestore.FieldValue
+                                            .serverTimestamp()
+                                }
+                            );
+
+
+                            // -----------------------------------------
+                            // Blokada grupy
+                            //
+                            // UWAGA:
+                            // ta informacja jest potrzebna
+                            // technicznie, ale użytkownikowi
+                            // nie pokazujemy, kto ją zajął.
+                            // -----------------------------------------
+
+                            transaction.set(
+                                groupLockRef,
+                                {
+                                    year: CURRENT_YEAR,
+                                    group: selectedGroup,
+                                    timestamp:
+                                        firebase.firestore.FieldValue
+                                            .serverTimestamp()
+                                }
+                            );
+
+                        }
+                    );
+
+
+                    // =================================================
+                    // SUKCES
+                    // =================================================
+
+                    resultDiv.innerHTML =
+                        "🎉 Losowanie zakończone!<br><br>" +
+                        "Wybrałeś grupę <strong>" +
+                        String.fromCharCode(
+                            64 + selectedGroup
+                        ) +
+                        "</strong>.";
+
+
+                    // -------------------------------------------------
+                    // QR CODE
+                    // -------------------------------------------------
+
+                    qrCodeDiv.innerHTML = "";
+
+                    new QRCode(
+                        qrCodeDiv,
+                        {
+                            text: window.location.href,
+                            width: 150,
+                            height: 150
+                        }
+                    );
+
+
+                    // -------------------------------------------------
+                    // Odświeżenie strony
+                    // -------------------------------------------------
+
+                    await updateEverything();
+
+
+                } catch (error) {
+
+                    console.error(error);
+
+
+                    // =================================================
+                    // WAŻNE:
+                    //
+                    // Nie ujawniamy żadnych szczegółów,
+                    // kto zajął grupę.
+                    // =================================================
+
+                    if (
+                        error.message ===
+                        "ALREADY_DRAWN"
+                    ) {
+
+                        resultDiv.innerHTML =
+                            '<span class="warning">' +
+                            "To imię ma już wykonane losowanie." +
+                            "</span>";
+
+                    } else if (
+                        error.message ===
+                        "GROUP_TAKEN"
+                    ) {
+
+                        resultDiv.innerHTML =
+                            '<span class="warning">' +
+                            "Ta opcja jest już niedostępna. " +
+                            "Wybierz inną." +
+                            "</span>";
+
+
+                        await updateGroupButtons();
+
+                    } else if (
+                        error.message ===
+                        "OWN_GROUP"
+                    ) {
+
+                        // Celowo neutralny komunikat.
+                        // Nie informujemy, kto jest w tej grupie.
+
+                        resultDiv.innerHTML =
+                            '<span class="warning">' +
+                            "Tej opcji nie można wybrać. " +
+                            "Wybierz inną." +
+                            "</span>";
+
+                    } else {
+
+                        resultDiv.innerHTML =
+                            '<span class="warning">' +
+                            "Wystąpił problem. " +
+                            "Spróbuj ponownie." +
+                            "</span>";
+
+                    }
+
+                }
+
+            }
+        );
+
+    });
+
+
+    // =========================================================
+    // REAL-TIME UPDATE
+    // =========================================================
+
+    function setupRealtimeUpdates() {
+
+
+        // ---------------------------------------------------------
+        // Aktualizacja listy osób, które jeszcze nie głosowały
+        // ---------------------------------------------------------
+
+        db
+            .collection("draws")
+            .where(
+                "year",
+                "==",
+                CURRENT_YEAR
+            )
+            .onSnapshot(
+                snapshot => {
+
+                    const drawnUsers =
+                        snapshot.docs.map(
+                            doc => doc.data().user
+                        );
+
+
+                    const availableUsers =
+                        users.filter(
+                            user =>
+                                !drawnUsers.includes(user)
+                        );
+
+
+                    if (
+                        availableUsers.length > 0
+                    ) {
+
+                        availableDiv.textContent =
+                            "Dostępni do losowania: " +
+                            availableUsers.join(", ");
+
+                    } else {
+
+                        availableDiv.textContent =
+                            "🎉 Wszyscy już dokonali losowania!";
+
+                    }
+
+                },
+
+                error => {
+
+                    console.error(
+                        "Błąd nasłuchiwania draws:",
+                        error
+                    );
+
+                    availableDiv.textContent =
+                        "⚠️ Problem z aktualizacją listy.";
+
+                }
+            );
+
+
+        // ---------------------------------------------------------
+        // Aktualizacja zajętych grup
+        // ---------------------------------------------------------
+
+        db
+            .collection("groupLocks")
+            .where(
+                "year",
+                "==",
+                CURRENT_YEAR
+            )
+            .onSnapshot(
+                () => {
+
+                    updateGroupButtons();
+
+                },
+
+                error => {
+
+                    console.error(
+                        "Błąd nasłuchiwania grup:",
+                        error
+                    );
+
+                }
+            );
+
+    }
+
+
+    // =========================================================
+    // PANEL ADMINISTRATORA
+    // =========================================================
+
+    document
+        .getElementById("title")
+        .addEventListener(
+            "dblclick",
+            function() {
+
+                const password =
+                    prompt(
+                        "Podaj hasło administratora:"
+                    );
+
+
+                if (
+                    password ===
+                    ADMIN_PASSWORD
+                ) {
+
+                    adminPanel.style.display =
+                        "block";
+
+                } else if (
+                    password !== null
+                ) {
+
+                    alert(
+                        "Nieprawidłowe hasło."
+                    );
+
+                }
+
+            }
+        );
+
+
+    // =========================================================
+    // LOGI ADMINISTRATORA
+    // =========================================================
+
+    document
+        .getElementById("loadLogs")
+        .addEventListener(
+            "click",
+            async function() {
+
+                adminLogs.innerHTML =
+                    "⏳ Ładowanie...";
+
+
+                try {
+
+                    const snapshot =
+                        await db
+                            .collection("draws")
+                            .where(
+                                "year",
+                                "==",
+                                CURRENT_YEAR
+                            )
+                            .get();
+
+
+                    adminLogs.innerHTML = "";
+
+
+                    if (
+                        snapshot.empty
+                    ) {
+
+                        adminLogs.innerHTML =
+                            "<p>Brak wykonanych losowań.</p>";
+
+                        return;
+
+                    }
+
+
+                    snapshot.docs.forEach(
+                        doc => {
+
+                            const data =
+                                doc.data();
+
+
+                            const groupLetter =
+                                String.fromCharCode(
+                                    64 + data.group
+                                );
+
+
+                            const div =
+                                document.createElement(
+                                    "div"
+                                );
+
+
+                            div.className =
+                                "log";
+
+
+                            div.innerHTML =
+                                "<strong>" +
+                                data.user +
+                                "</strong>" +
+                                " → grupa " +
+                                "<strong>" +
+                                groupLetter +
+                                "</strong>";
+
+
+                            adminLogs.appendChild(
+                                div
+                            );
+
+                        }
+                    );
+
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    adminLogs.innerHTML =
+                        "⚠️ Nie udało się pobrać danych.";
+
+                }
+
+            }
+        );
+
+
+    // =========================================================
+    // RESET
+    // =========================================================
+
+    document
+        .getElementById("resetData")
+        .addEventListener(
+            "click",
+            async function() {
+
+                const confirmation =
+                    prompt(
+                        'Aby zresetować losowanie 2026, wpisz: RESET'
+                    );
+
+
+                if (
+                    confirmation !==
+                    "RESET"
+                ) {
+
+                    return;
+
+                }
+
+
+                try {
+
+                    // ---------------------------------------------
+                    // Usuwanie losowań
+                    // ---------------------------------------------
+
+                    const drawsSnapshot =
+                        await db
+                            .collection("draws")
+                            .where(
+                                "year",
+                                "==",
+                                CURRENT_YEAR
+                            )
+                            .get();
+
+
+                    const batch =
+                        db.batch();
+
+
+                    drawsSnapshot.docs.forEach(
+                        doc => {
+
+                            batch.delete(
+                                doc.ref
+                            );
+
+                        }
+                    );
+
+
+                    // ---------------------------------------------
+                    // Usuwanie blokad grup
+                    // ---------------------------------------------
+
+                    const groupsSnapshot =
+                        await db
+                            .collection("groupLocks")
+                            .where(
+                                "year",
+                                "==",
+                                CURRENT_YEAR
+                            )
+                            .get();
+
+
+                    groupsSnapshot.docs.forEach(
+                        doc => {
+
+                            batch.delete(
+                                doc.ref
+                            );
+
+                        }
+                    );
+
+
+                    await batch.commit();
+
+
+                    alert(
+                        "Losowanie 2026 zostało zresetowane."
+                    );
+
+
+                    adminLogs.innerHTML = "";
+
+
+                    await updateEverything();
+
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    alert(
+                        "Wystąpił błąd podczas resetowania."
+                    );
+
+                }
+
+            }
+        );
+
+
+    // =========================================================
+    // START
+    // =========================================================
+
+    updateEverything();
+
+    setupRealtimeUpdates();
+
+</script>
+
+</body>
+</html>
