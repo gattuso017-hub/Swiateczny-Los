@@ -501,8 +501,7 @@ const CURRENT_YEAR = 2026;
 //
 // ============================================================
 
-const ADMIN_EMAIL =
-    "gattuso017@gmail.com";
+const ADMIN_UID = "CvINwgBdgIUcusVXDkgyAP9Xhvs2";
 
 
 // ============================================================
@@ -692,18 +691,13 @@ function escapeHtml(text) {
 
 function isAdmin() {
 
-    const user =
-        auth.currentUser;
+    const user = auth.currentUser;
 
     if (!user) {
         return false;
     }
 
-    return (
-        !user.isAnonymous &&
-        user.email &&
-        user.email.toLowerCase() ===
-            ADMIN_EMAIL.toLowerCase()
+    return !user.isAnonymous && user.uid === ADMIN_UID;
     );
 
 }
