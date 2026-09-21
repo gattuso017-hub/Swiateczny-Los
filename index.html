@@ -170,8 +170,12 @@
 
             color: #333;
 
-            font-size: 14px;
+            font-size: 15px;
         }
+
+        .available-names {
+            color: #b30000;
+            font-weight: bold;
 
         #adminPanel {
             display: none;
@@ -633,9 +637,11 @@ async function updateAvailableUsers() {
             availableUsers.length > 0
         ) {
 
-            availableDiv.textContent =
+            availableDiv.innerHTML =
                 "Dostępni do losowania: " +
-                availableUsers.join(", ");
+                '<strong class="available-names"> +
+                escapeHtml(availableUsers.join(", ")) +
+                "</strong>";
 
         } else {
 
@@ -1231,9 +1237,11 @@ function setupRealtimeUpdates() {
                     availableUsers.length > 0
                 ) {
 
-                    availableDiv.textContent =
-                        "Dostępni do losowania: " +
-                        availableUsers.join(", ");
+                    availableDiv.innerHTML =
+    "Dostępni do losowania: " +
+    '<strong class="available-names">' +
+    escapeHtml(availableUsers.join(", ")) +
+    "</strong>";
 
                 } else {
 
