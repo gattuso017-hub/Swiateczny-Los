@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
-        * {F
+        * {
             box-sizing: border-box;
         }
 
@@ -176,6 +176,7 @@
         .available-names {
             color: #b30000;
             font-weight: bold;
+        }
 
         #adminPanel {
             display: none;
@@ -640,7 +641,7 @@ async function updateAvailableUsers() {
 
             availableDiv.innerHTML =
                 "Dostępni do losowania: " +
-                '<strong class="available-names"> +
+                '<strong class="available-names">' +
                 escapeHtml(availableUsers.join(", ")) +
                 "</strong>";
 
