@@ -18,6 +18,7 @@
         body {
             margin: 0;
             min-height: 100vh;
+
             font-family: Arial, sans-serif;
 
             background: url('https://i.ibb.co/tBf5G6/christmas-bg.jpg')
@@ -39,16 +40,20 @@
             background: rgba(255, 255, 255, 0.94);
 
             padding: 30px;
+
             border-radius: 20px;
 
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            box-shadow:
+                0 10px 40px rgba(0, 0, 0, 0.25);
 
             text-align: center;
         }
 
         h1 {
             margin-top: 0;
+
             color: #b30000;
+
             cursor: pointer;
         }
 
@@ -69,6 +74,7 @@
             margin-bottom: 20px;
 
             border: 2px solid #ddd;
+
             border-radius: 10px;
 
             font-size: 16px;
@@ -76,6 +82,7 @@
 
         input:focus {
             outline: none;
+
             border-color: #b30000;
         }
 
@@ -94,12 +101,15 @@
             padding: 18px 5px;
 
             border: none;
+
             border-radius: 12px;
 
             background: #b30000;
+
             color: white;
 
             font-size: 20px;
+
             font-weight: bold;
 
             cursor: pointer;
@@ -107,21 +117,31 @@
             transition: 0.2s;
         }
 
-        .group-button:hover {
+        .group-button:hover:not(:disabled) {
             transform: scale(1.05);
 
             background: #8f0000;
         }
 
         /*
-         * WAŻNE:
+         * GRUPA JUŻ WYKORZYSTANA
          *
-         * ŻADEN przycisk A-E nie jest wyszarzany
-         * na podstawie osoby lub zajętej grupy.
+         * Ważne:
          *
-         * Dzięki temu użytkownik nie może podejrzeć,
-         * która grupa jest czyja.
+         * Nie pokazujemy, KTO ją wykorzystał.
          */
+
+        .group-button:disabled {
+            background: #aaa;
+
+            color: #eee;
+
+            cursor: not-allowed;
+
+            opacity: 0.7;
+
+            transform: none;
+        }
 
         #result {
             margin-top: 25px;
@@ -133,7 +153,10 @@
             background: #f5f5f5;
 
             font-size: 18px;
+
             font-weight: bold;
+
+            line-height: 1.5;
         }
 
         #available {
@@ -230,6 +253,14 @@
             font-weight: bold;
         }
 
+        .winner {
+            margin-top: 10px;
+
+            font-size: 24px;
+
+            color: #b30000;
+        }
+
         @media (max-width: 500px) {
 
             .container {
@@ -260,8 +291,7 @@
 
 
     <p>
-        Wpisz swoje imię, a następnie wybierz jedną
-        z dostępnych grup.
+        Wpisz swoje imię, a następnie wybierz jedną z dostępnych grup.
     </p>
 
 
@@ -334,9 +364,7 @@
     <div id="qrCode"></div>
 
 
-    <!-- ============================= -->
     <!-- PANEL ADMINISTRATORA -->
-    <!-- ============================= -->
 
     <div id="adminPanel">
 
@@ -418,12 +446,6 @@ const ADMIN_PASSWORD =
 // ============================================================
 // GRUPY
 // ============================================================
-//
-// Te dane są wykorzystywane przez aplikację
-// oraz przez panel administratora.
-//
-// NIE są pokazywane zwykłemu użytkownikowi.
-// ============================================================
 
 const groups = {
 
@@ -461,7 +483,7 @@ const groups = {
 
 
 // ============================================================
-// OSOBY, KTÓRE LOSUJĄ
+// OSOBY, KTÓRE GŁOSUJĄ
 // ============================================================
 
 const users = [
@@ -476,7 +498,7 @@ const users = [
 
 
 // ============================================================
-// GRUPA WŁASNA UŻYTKOWNIKA
+// WŁASNE GRUPY
 // ============================================================
 
 const userGroups = {
@@ -495,7 +517,7 @@ const userGroups = {
 
 
 // ============================================================
-// ELEMENTY HTML
+// ELEMENTY
 // ============================================================
 
 const nameInput =
@@ -554,7 +576,26 @@ function groupLetter(groupNumber) {
 
 
 // ============================================================
-// DOSTĘPNI UŻYTKOWNICY
+// BEZPIECZNE HTML
+// ============================================================
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent =
+        text;
+
+    return div.innerHTML;
+
+}
+
+
+// ============================================================
+// LISTA OSÓB, KTÓRE JESZCZE NIE LOSOWAŁY
 // ============================================================
 
 async function updateAvailableUsers() {
@@ -582,7 +623,9 @@ async function updateAvailableUsers() {
         const availableUsers =
             users.filter(
                 user =>
-                    !drawnUsers.includes(user)
+                    !drawnUsers.includes(
+                        user
+                    )
             );
 
 
@@ -605,7 +648,6 @@ async function updateAvailableUsers() {
 
         console.error(error);
 
-
         availableDiv.textContent =
             "⚠️ Problem z połączeniem z bazą danych.";
 
@@ -615,32 +657,87 @@ async function updateAvailableUsers() {
 
 
 // ============================================================
-// PRZYCISKI GRUP
+// AKTUALIZACJA GRUP
 // ============================================================
 //
-// NAJWAŻNIEJSZA ZMIANA.
+// Tutaj jest bardzo ważna zasada:
 //
-// Wszystkie przyciski A-E są ZAWSZE aktywne.
+// PRZED ODDANIEM GŁOSU nie pokazujemy,
+// która grupa należy do danej osoby.
 //
-// Nie pokazujemy:
+// ALE grupy już wykorzystane przez innych
+// pokazujemy jako wyszarzone.
 //
-// - własnej grupy,
-// - zajętej grupy,
-// - osoby znajdującej się w grupie.
-//
-// Dzięki temu wygląd przycisków niczego nie zdradza.
+// Nie pokazujemy, KTO je wykorzystał.
 // ============================================================
 
-function updateGroupButtons() {
+async function updateGroupButtons() {
 
-    groupButtons.forEach(
-        button => {
+    try {
 
-            button.disabled =
-                false;
+        const snapshot =
+            await db
+                .collection("groupLocks")
+                .where(
+                    "year",
+                    "==",
+                    CURRENT_YEAR
+                )
+                .get();
 
-        }
-    );
+
+        const takenGroups =
+            snapshot.docs.map(
+                doc =>
+                    Number(
+                        doc.data().group
+                    )
+            );
+
+
+        groupButtons.forEach(
+            button => {
+
+                const group =
+                    Number(
+                        button.dataset.group
+                    );
+
+
+                if (
+                    takenGroups.includes(
+                        group
+                    )
+                ) {
+
+                    button.disabled =
+                        true;
+
+                    button.title =
+                        "Ta grupa została już wykorzystana.";
+
+                } else {
+
+                    button.disabled =
+                        false;
+
+                    button.title =
+                        "";
+
+                }
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Błąd aktualizacji grup:",
+            error
+        );
+
+    }
 
 }
 
@@ -651,7 +748,7 @@ function updateGroupButtons() {
 
 async function updateEverything() {
 
-    updateGroupButtons();
+    await updateGroupButtons();
 
     await updateAvailableUsers();
 
@@ -666,12 +763,18 @@ nameInput.addEventListener(
     "input",
     function() {
 
-        resultDiv.textContent = "";
+        resultDiv.innerHTML = "";
 
         qrCodeDiv.innerHTML = "";
 
         /*
-         * Wszystkie grupy nadal wyglądają identycznie.
+         * WAŻNE:
+         *
+         * Wpisanie Jarek/Kasia/Sabina itd.
+         * NIE powoduje wyszarzenia ich własnej grupy.
+         *
+         * Aktualizujemy tylko informację o tym,
+         * które grupy zostały już wykorzystane.
          */
 
         updateGroupButtons();
@@ -701,9 +804,9 @@ groupButtons.forEach(
                     );
 
 
-                // ----------------------------------------------
-                // Brak imienia
-                // ----------------------------------------------
+                // ------------------------------------------------
+                // BRAK IMIENIA
+                // ------------------------------------------------
 
                 if (!selectedName) {
 
@@ -717,9 +820,9 @@ groupButtons.forEach(
                 }
 
 
-                // ----------------------------------------------
-                // Nieprawidłowe imię
-                // ----------------------------------------------
+                // ------------------------------------------------
+                // NIEZNANE IMIĘ
+                // ------------------------------------------------
 
                 if (
                     !users.includes(
@@ -745,7 +848,7 @@ groupButtons.forEach(
 
 
                     // =================================================
-                    // TRANSAKCJA FIRESTORE
+                    // TRANSAKCJA
                     // =================================================
 
                     await db.runTransaction(
@@ -754,7 +857,9 @@ groupButtons.forEach(
 
                             const drawRef =
                                 db
-                                    .collection("draws")
+                                    .collection(
+                                        "draws"
+                                    )
                                     .doc(
                                         CURRENT_YEAR +
                                         "_" +
@@ -787,7 +892,7 @@ groupButtons.forEach(
 
 
                             // -----------------------------------------
-                            // Ta osoba już losowała
+                            // OSOBA JUŻ LOSOWAŁA
                             // -----------------------------------------
 
                             if (
@@ -802,7 +907,7 @@ groupButtons.forEach(
 
 
                             // -----------------------------------------
-                            // Grupa jest już zajęta
+                            // GRUPA JUŻ ZAJĘTA
                             // -----------------------------------------
 
                             if (
@@ -817,10 +922,10 @@ groupButtons.forEach(
 
 
                             // -----------------------------------------
-                            // Własna grupa
+                            // WŁASNA GRUPA
                             //
-                            // Nie blokujemy jej wizualnie.
-                            // Sprawdzamy dopiero tutaj.
+                            // NIE JEST WYSZARZANA.
+                            // SPRAWDZAMY DOPIERO PO KLIKNIĘCIU.
                             // -----------------------------------------
 
                             if (
@@ -838,7 +943,20 @@ groupButtons.forEach(
 
 
                             // -----------------------------------------
-                            // ZAPIS LOSOWANIA
+                            // OSOBY W WYBRANEJ GRUPIE
+                            // -----------------------------------------
+
+                            const selectedMembers =
+                                groups[
+                                    selectedGroup
+                                ] || [];
+
+
+                            // -----------------------------------------
+                            // ZAPIS WYNIKU
+                            //
+                            // winnerMembers = osoby,
+                            // które użytkownik zobaczy po losowaniu.
                             // -----------------------------------------
 
                             transaction.set(
@@ -853,6 +971,9 @@ groupButtons.forEach(
 
                                     group:
                                         selectedGroup,
+
+                                    winnerMembers:
+                                        selectedMembers,
 
                                     timestamp:
                                         firebase
@@ -892,22 +1013,43 @@ groupButtons.forEach(
 
 
                     // =================================================
-                    // SUKCES
+                    // POKAZANIE WYNIKU UŻYTKOWNIKOWI
                     // =================================================
 
+                    const winnerMembers =
+                        groups[
+                            selectedGroup
+                        ] || [];
+
+
                     resultDiv.innerHTML =
+
                         '<span class="success">' +
 
                         "🎉 Losowanie zakończone!" +
 
-                        "</span><br><br>" +
+                        "</span>" +
+
+                        '<div class="winner">' +
 
                         "Twoja grupa: " +
 
-                        "<strong>" +
-
                         groupLetter(
                             selectedGroup
+                        ) +
+
+                        "</div>" +
+
+                        "<br>" +
+
+                        "👥 Wylosowana grupa:" +
+
+                        "<br><br>" +
+
+                        "<strong>" +
+
+                        escapeHtml(
+                            winnerMembers.join(", ")
                         ) +
 
                         "</strong>";
@@ -938,7 +1080,7 @@ groupButtons.forEach(
 
 
                     // =================================================
-                    // ODŚWIEŻENIE
+                    // AKTUALIZACJA
                     // =================================================
 
                     await updateEverything();
@@ -946,7 +1088,9 @@ groupButtons.forEach(
 
                 } catch (error) {
 
-                    console.error(error);
+                    console.error(
+                        error
+                    );
 
 
                     // ----------------------------------------------
@@ -986,6 +1130,9 @@ groupButtons.forEach(
 
                             "</span>";
 
+
+                        await updateGroupButtons();
+
                     }
 
 
@@ -997,6 +1144,14 @@ groupButtons.forEach(
                         error.message ===
                         "OWN_GROUP"
                     ) {
+
+                        /*
+                         * Nie mówimy:
+                         *
+                         * "To Twoja grupa".
+                         *
+                         * Bo zdradziłoby to informację.
+                         */
 
                         resultDiv.innerHTML =
                             '<span class="warning">' +
@@ -1025,15 +1180,6 @@ groupButtons.forEach(
 
                     }
 
-
-                    /*
-                     * Ważne:
-                     *
-                     * Po błędzie NIE wyszarzamy żadnej grupy.
-                     */
-
-                    updateGroupButtons();
-
                 }
 
             }
@@ -1044,14 +1190,14 @@ groupButtons.forEach(
 
 
 // ============================================================
-// REAL-TIME AKTUALIZACJE
+// REAL-TIME
 // ============================================================
 
 function setupRealtimeUpdates() {
 
 
     // ----------------------------------------------------------
-    // Lista osób, które już wykonały losowanie
+    // Aktualizacja listy osób
     // ----------------------------------------------------------
 
     db
@@ -1111,10 +1257,7 @@ function setupRealtimeUpdates() {
 
 
     // ----------------------------------------------------------
-    // Nasłuchiwanie zmian grup
-    //
-    // UWAGA:
-    // Nie zmieniamy wyglądu przycisków.
+    // Aktualizacja zajętych grup
     // ----------------------------------------------------------
 
     db
@@ -1190,21 +1333,6 @@ document
 // ============================================================
 // LOGI ADMINISTRATORA
 // ============================================================
-//
-// ADMIN WIDZI:
-//
-// Sabina
-// → grupa C
-// → Kasia, Kamil, Franuś
-//
-// Jarek
-// → grupa B
-// → Madzia, Kazek, Ania, Mikołaj
-//
-// itd.
-//
-// Zwykły użytkownik NIGDY tego nie widzi.
-// ============================================================
 
 document
     .getElementById("loadLogs")
@@ -1222,7 +1350,9 @@ document
 
                 const snapshot =
                     await db
-                        .collection("draws")
+                        .collection(
+                            "draws"
+                        )
                         .where(
                             "year",
                             "==",
@@ -1233,10 +1363,6 @@ document
 
                 adminLogs.innerHTML = "";
 
-
-                // ------------------------------------------------
-                // Brak wyników
-                // ------------------------------------------------
 
                 if (
                     snapshot.empty
@@ -1253,7 +1379,7 @@ document
 
 
                 // ------------------------------------------------
-                // Sortowanie alfabetyczne po imieniu
+                // SORTOWANIE
                 // ------------------------------------------------
 
                 const results =
@@ -1272,7 +1398,7 @@ document
 
 
                 // ------------------------------------------------
-                // Wyświetlanie wyników
+                // WYNIKI
                 // ------------------------------------------------
 
                 results.forEach(
@@ -1309,6 +1435,8 @@ document
 
                         div.innerHTML =
 
+                            "👤 " +
+
                             "<strong>" +
 
                             escapeHtml(
@@ -1317,7 +1445,9 @@ document
 
                             "</strong>" +
 
-                            " → grupa " +
+                            "<br>" +
+
+                            "🎯 Wybrana grupa: " +
 
                             "<strong>" +
 
@@ -1344,7 +1474,9 @@ document
 
             } catch (error) {
 
-                console.error(error);
+                console.error(
+                    error
+                );
 
 
                 adminLogs.innerHTML =
@@ -1357,26 +1489,7 @@ document
 
 
 // ============================================================
-// BEZPIECZNE WSTAWIANIE TEKSTU
-// ============================================================
-
-function escapeHtml(text) {
-
-    const div =
-        document.createElement(
-            "div"
-        );
-
-    div.textContent =
-        text;
-
-    return div.innerHTML;
-
-}
-
-
-// ============================================================
-// RESET LOSOWANIA
+// RESET
 // ============================================================
 
 document
@@ -1411,7 +1524,9 @@ document
 
                 const drawsSnapshot =
                     await db
-                        .collection("draws")
+                        .collection(
+                            "draws"
+                        )
                         .where(
                             "year",
                             "==",
@@ -1421,12 +1536,14 @@ document
 
 
                 // ------------------------------------------------
-                // BLOKADY GRUP
+                // BLOKADY
                 // ------------------------------------------------
 
                 const groupsSnapshot =
                     await db
-                        .collection("groupLocks")
+                        .collection(
+                            "groupLocks"
+                        )
                         .where(
                             "year",
                             "==",
@@ -1434,10 +1551,6 @@ document
                         )
                         .get();
 
-
-                // ------------------------------------------------
-                // BATCH
-                // ------------------------------------------------
 
                 const batch =
                     db.batch();
@@ -1490,7 +1603,9 @@ document
 
             } catch (error) {
 
-                console.error(error);
+                console.error(
+                    error
+                );
 
 
                 alert(
