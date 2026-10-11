@@ -284,10 +284,6 @@ const drawCollection = db.collection("draws");
 const lockCollection = db.collection("groupLocks");
 const groupNumbers = Object.keys(groups).map(Number);
 
-// ============================================================
-// POMOCNICZE
-// ============================================================
-
 function groupLetter(groupNumber) {
     return String.fromCharCode(64 + Number(groupNumber));
 }
@@ -312,7 +308,7 @@ function lockDocumentId(group) {
 }
 
 // ============================================================
-// ZABEZPIECZENIE: CZY LOSOWANIE MOŻNA DOKOŃCZYĆ?
+// SPRAWDZENIE, CZY LOSOWANIE MOŻNA DOKOŃCZYĆ
 // ============================================================
 
 function canCompleteAssignment(remainingUsers, availableGroups) {
@@ -324,7 +320,6 @@ function canCompleteAssignment(remainingUsers, availableGroups) {
         return true;
     }
 
-    // Wybieramy osobę z najmniejszą liczbą możliwych grup.
     let bestUser = null;
     let bestOptions = null;
 
@@ -359,7 +354,7 @@ function canCompleteAssignment(remainingUsers, availableGroups) {
 }
 
 // ============================================================
-// ODCZYT AKTUALNEGO STANU
+// ODCZYT STANU LOSOWANIA
 // ============================================================
 
 async function readDrawState() {
@@ -438,34 +433,27 @@ async function updateAvailableUsers() {
 }
 
 // ============================================================
-// AKTUALIZACJA PRZYCISKÓW GRUP
+// AKTUALIZACJA GRUP
+// Nie ujawniamy własnej grupy po wpisaniu imienia.
+// Blokujemy wyłącznie grupy już zajęte.
 // ============================================================
 
 async function updateGroupButtons() {
     try {
-        const { drawnUsers, takenGroups } = await readDrawState();
-        const selectedName = nameInput.value.trim();
-        const alreadyDrawn = drawnUsers.has(selectedName);
+        const { takenGroups } = await readDrawState();
 
         groupButtons.forEach(button => {
             const group = Number(button.dataset.group);
             const isTaken = takenGroups.has(group);
-            const isOwnGroup = userGroups[selectedName] === group;
 
-            button.disabled = isTaken || isOwnGroup || alreadyDrawn;
-
-            if (alreadyDrawn) {
-                button.title = "To imię ma już wykonane losowanie.";
-            } else if (isTaken) {
-                button.title = "Ta grupa została już wykorzystana.";
-            } else if (isOwnGroup) {
-                button.title = "Nie możesz wylosować własnej grupy.";
-            } else {
-                button.title = "";
-            }
+            button.disabled = isTaken;
+            button.title = isTaken
+                ? "Ta grupa została już wykorzystana."
+                : "";
         });
     } catch (error) {
         console.error("Błąd aktualizacji grup:", error);
+
         groupButtons.forEach(button => {
             button.disabled = true;
             button.title = "Nie udało się sprawdzić dostępności.";
@@ -491,7 +479,7 @@ nameInput.addEventListener("input", async () => {
 });
 
 // ============================================================
-// LOSOWANIE — TRANSAKCJA I SPRAWDZENIE MOŻLIWOŚCI DOKOŃCZENIA
+// LOSOWANIE
 // ============================================================
 
 groupButtons.forEach(button => {
@@ -530,7 +518,7 @@ groupButtons.forEach(button => {
                     lockCollection.doc(lockDocumentId(group))
                 );
 
-                // Wszystkie odczyty dokumentów muszą być przed zapisami.
+                // Wszystkie odczyty przed zapisami.
                 const drawDocs = await Promise.all(
                     drawRefs.map(ref => transaction.get(ref))
                 );
@@ -576,6 +564,7 @@ groupButtons.forEach(button => {
                     throw new Error("GROUP_TAKEN");
                 }
 
+                // Własna grupa sprawdzana dopiero po kliknięciu.
                 if (userGroups[selectedName] === selectedGroup) {
                     throw new Error("OWN_GROUP");
                 }
@@ -588,9 +577,8 @@ groupButtons.forEach(button => {
                     group => !takenGroups.has(group) && group !== selectedGroup
                 );
 
-                // Najważniejsze zabezpieczenie:
-                // nie pozwalamy wykonać wyboru, który uniemożliwi
-                // prawidłowe dokończenie losowania.
+                // Nie pozwalamy na wybór, który uniemożliwi
+                // poprawne dokończenie losowania.
                 if (!canCompleteAssignment(remainingUsers, availableGroups)) {
                     throw new Error("WOULD_BLOCK_REMAINING_USER");
                 }
@@ -637,15 +625,17 @@ groupButtons.forEach(button => {
             const messages = {
                 ALREADY_DRAWN: "To imię ma już wykonane losowanie.",
                 GROUP_TAKEN: "Ta grupa jest już zajęta. Wybierz inną.",
-                OWN_GROUP: "Nie możesz wylosować własnej grupy.",
+                OWN_GROUP: "Nie możesz wylosować tej grupy. Wybierz inną.",
                 WOULD_BLOCK_REMAINING_USER:
-                    "Nie możesz wybrać tej grupy, ponieważ zablokowałoby to poprawne losowanie dla pozostałych osób. Wybierz inną grupę."
+                    "Nie możesz wybrać tej grupy, ponieważ uniemożliwiłoby to poprawne losowanie pozostałym osobom. Wybierz inną."
             };
 
             resultDiv.innerHTML =
                 '<span class="warning">' +
-                escapeHtml(messages[error.message] ||
-                    "Wystąpił problem. Spróbuj ponownie.") +
+                escapeHtml(
+                    messages[error.message] ||
+                    "Wystąpił problem. Spróbuj ponownie."
+                ) +
                 '</span>';
 
         } finally {
@@ -751,7 +741,9 @@ document.getElementById("loadLogs").addEventListener("click", async () => {
 
         const results = snapshot.docs
             .map(doc => doc.data())
-            .sort((a, b) => String(a.user).localeCompare(String(b.user), "pl"));
+            .sort((a, b) =>
+                String(a.user).localeCompare(String(b.user), "pl")
+            );
 
         results.forEach(data => {
             const groupNumber = Number(data.group);
@@ -796,12 +788,12 @@ document.getElementById("resetData").addEventListener("click", async () => {
             lockCollection.where("year", "==", CURRENT_YEAR).get()
         ]);
 
-        // Batch Firestore ma limit 500 operacji.
         const refs = [
             ...drawsSnapshot.docs.map(doc => doc.ref),
             ...groupsSnapshot.docs.map(doc => doc.ref)
         ];
 
+        // Dzielimy na partie, aby nie przekroczyć limitu Firestore.
         for (let i = 0; i < refs.length; i += 450) {
             const batch = db.batch();
 
